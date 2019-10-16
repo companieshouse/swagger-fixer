@@ -42,7 +42,7 @@ public class Source implements ISource {
                 throw new IOException("Input path '" + path.getAbsolutePath() + "' not found");
             }
             if (path.isDirectory()) {
-                files.addAll(getInputFilesInDir(path)
+                final boolean fileList = files.addAll(getInputFilesInDir(path)
                         .collect(Collectors.toList()));
             } else {
                 files.add(path);
@@ -52,15 +52,17 @@ public class Source implements ISource {
     }
 
     private Stream<File> getInputFilesInDir(final File path) {
-        return Arrays.stream(Objects.requireNonNull(path.list()))
+        final String[] list = path.list();
+        final Stream<File> files = Arrays.stream(Objects.requireNonNull(list))
                 .filter(f -> f.endsWith(extension))
-                .map(File::new)
+                .map(pathname -> new File(path, pathname))
                 .filter(File::isFile);
+        return files;
     }
 
     @Override
     public void setOuputDir(final String oDir) throws IOException {
-        File path = Paths.get(oDir).toRealPath().toAbsolutePath().toFile();
+        File path = Paths.get(oDir).toFile();
         if (path.exists()) {
             if ((!path.isDirectory()) || (!path.canWrite())) {
                 throw new IOException("No writeable directory at '" + path.getAbsolutePath()

@@ -19,7 +19,7 @@ public class Fix1_2 {
     private static ThreadLocal<File> lastFile = new ThreadLocal<>();
     private ISource source;
 
-    public static void main(String[] args) {
+    public static void main(String... args) {
         Fix1_2 fixer = new Fix1_2();
         fixer.parseArgs(args);
         fixer.fixFiles();
@@ -37,12 +37,7 @@ public class Fix1_2 {
     }
 
     static JsonNode fixJson(File file) {
-//        final File file = lastFile.get() == null ? new File(fName)
-//                : new File(lastFile.get().getParent(), fName);
         String jsonContent = readFile(file);
-        if (lastFile.get() == null) {
-            lastFile.set(file.getAbsoluteFile());
-        }
         final JsonNodeExtractor ne = new JsonNodeExtractor();
         return ne.convertJson(jsonContent);
     }
@@ -66,6 +61,7 @@ public class Fix1_2 {
             } else {
                 outPath = Paths.get(outDir).resolve(fName.toPath());
             }
+            source.setOuputDir(outPath.toAbsolutePath().toString());
         } catch (IOException e) {
             e.printStackTrace();
         }

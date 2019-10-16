@@ -13,4 +13,6 @@ public interface ISource {
     void setInputFiles(final Collection<String> inputFiles) throws IOException;
 
     void setOuputDir(final String oDirs) throws IOException;
+
+    void setWorkingDir(final String s) throws IOException;
 }

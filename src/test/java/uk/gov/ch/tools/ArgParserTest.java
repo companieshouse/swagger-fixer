@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-class ArgParserTest {
+public class ArgParserTest {
 
     private static final String oOpt = "-o";
     private static final String iOpt = "-i";
