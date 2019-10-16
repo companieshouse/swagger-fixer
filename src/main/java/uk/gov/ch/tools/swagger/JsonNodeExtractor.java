@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,13 +18,14 @@ import java.util.stream.Collectors;
 
 class JsonNodeExtractor {
 
-    public static final String ARRAY = "array";
+    private static final String ARRAY = "array";
     private static final String MODELS = "models";
     private static final String DATE = "date";
     private static final String STRING = "string";
     private static final String FORMAT = "format";
     private static final String TYPE = "type";
     private final static Map<String, String> unmodifiableSubstitutions;
+    private static final String OBJECT = "object";
 
     static {
         final Map<String, String> substitutions = new HashMap<>();
@@ -31,7 +33,7 @@ class JsonNodeExtractor {
         substitutions.put("Array", ARRAY);
         substitutions.put("List", ARRAY);
         substitutions.put("list", ARRAY);
-        substitutions.put("<value>", "object");
+        substitutions.put("<value>", OBJECT);
         unmodifiableSubstitutions = Collections.unmodifiableMap(substitutions);
     }
 
@@ -75,10 +77,8 @@ class JsonNodeExtractor {
             if (value.isTextual()) {
                 final String originalValue = value.textValue();
                 if (originalValue.contains("<")) {
-                    //     System.out.println(originalValue);
                     HtmlCleaner htmlCleaner = new HtmlCleaner();
                     final String fixedValue = htmlCleaner.removeHtml(originalValue);
-                    //       System.out.println(fixedValue);
                     replaceTextNodeValue(node, key, value, fixedValue);
                 }
             } else {
@@ -123,8 +123,9 @@ class JsonNodeExtractor {
     }
 
     private void includeModelFile(JsonNode root, JsonNode el) {
-        final String path = el.get("path").asText(null);
-        if (path != null) {
+        final String target = el.get("path").asText(null);
+        if (target != null) {
+            final File path = new File(target);
             try {
                 final JsonNode inclusion = Fix1_2.fixJson(path);
                 final ObjectNode includeModels = (ObjectNode) inclusion.get(MODELS);
@@ -135,13 +136,15 @@ class JsonNodeExtractor {
                     rootModels.replace(field.getKey(), field.getValue());
                 }
             } catch (Exception ex) {
+                System.err
+                        .println("Included model file not found `" + path.getAbsolutePath() + "`");
                 ex.printStackTrace();
             }
         }
     }
 
     private void processTypes(final JsonNode node) {
-        subtituteKnownBadTypes(node);
+        substituteKnownBadTypes(node);
         processTypeProperties(node);
     }
 
@@ -172,25 +175,21 @@ class JsonNodeExtractor {
             if (distinctValues.size() < enumValues.size()) {
                 final ObjectNode oProperty = (ObjectNode) property;
                 final ArrayNode aEnum = oProperty.putArray("enum");
-                distinctValues.forEach(e -> aEnum.add(e));
+                distinctValues.forEach(aEnum::add);
                 System.out.println(aEnum.getNodeType() + ":" + aEnum);
                 System.out.println(property.getNodeType() + ":" + property);
             }
         }
     }
 
-    private boolean f(Object a, Object b) {
-        return false;
-    }
-
     private void fixMissingParameterType(final JsonNode property) {
         if (!property.has(TYPE)) {
             ((ObjectNode) property).replace(TYPE, ((ObjectNode) property)
-                    .textNode(property.has("items") ? ARRAY : "object"));
+                    .textNode(property.has("items") ? ARRAY : OBJECT));
         }
     }
 
-    private void subtituteKnownBadTypes(JsonNode node) {
+    private void substituteKnownBadTypes(final JsonNode node) {
         final List<JsonNode> typeParents = node.findParents(TYPE);
         typeParents.stream()
                 .filter(n -> n instanceof ObjectNode)

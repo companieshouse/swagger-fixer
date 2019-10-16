@@ -7,7 +7,7 @@ import uk.gov.ch.tools.ArgParser;
 
 class ArgPackager {
 
-    ISource source = new Source();
+    private ISource source = new Source();
 
     ArgPackager(final String[] args) {
         final String[] filenames = {
@@ -44,11 +44,11 @@ class ArgPackager {
                 }
             }
         } catch (Exception ex) {
-
+// Run with default values
         }
     }
 
-    public ISource getSource() {
+    ISource getSource() {
         return source;
     }
 }
