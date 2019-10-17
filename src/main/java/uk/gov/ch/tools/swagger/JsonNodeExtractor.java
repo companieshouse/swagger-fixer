@@ -125,22 +125,33 @@ class JsonNodeExtractor {
     private void includeModelFile(JsonNode root, JsonNode el) {
         final String target = el.get("path").asText(null);
         if (target != null) {
-            final File path = new File(target);
+            String relativePath = target.startsWith("/") ? target.substring(1) : target;
+            final File path = new File(relativePath);
             try {
                 final JsonNode inclusion = Fix1_2.fixJson(path);
                 final ObjectNode includeModels = (ObjectNode) inclusion.get(MODELS);
-                final ObjectNode rootModels = (ObjectNode) root.get(MODELS);
+                final ObjectNode rootModels = getRootModel(root);
                 Iterator<Entry<String, JsonNode>> it = includeModels.fields();
                 while (it.hasNext()) {
                     final Entry<String, JsonNode> field = it.next();
                     rootModels.replace(field.getKey(), field.getValue());
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 System.err
-                        .println("Included model file not found `" + path.getAbsolutePath() + "`");
+                        .println("Problem including model file not found '" + path + "'");
                 ex.printStackTrace();
             }
         }
+    }
+
+    private ObjectNode getRootModel(JsonNode root) {
+        ObjectNode rootModels = (ObjectNode) root.get(MODELS);
+        if (rootModels == null) {
+            final ObjectNode oRoot = (ObjectNode) root;
+            rootModels = oRoot.objectNode();
+            oRoot.replace(MODELS, rootModels);
+        }
+        return rootModels;
     }
 
     private void processTypes(final JsonNode node) {
@@ -170,14 +181,11 @@ class JsonNodeExtractor {
             enumNode.forEach(en -> enumValues.add(en.asText()));
             final List<String> distinctValues = enumValues.stream().distinct()
                     .collect(Collectors.toList());
-            //  System.out.println(enumNode.getNodeType()+ ":"+ enumNode);
             // are there duplicate enums values
             if (distinctValues.size() < enumValues.size()) {
                 final ObjectNode oProperty = (ObjectNode) property;
                 final ArrayNode aEnum = oProperty.putArray("enum");
                 distinctValues.forEach(aEnum::add);
-                System.out.println(aEnum.getNodeType() + ":" + aEnum);
-                System.out.println(property.getNodeType() + ":" + property);
             }
         }
     }

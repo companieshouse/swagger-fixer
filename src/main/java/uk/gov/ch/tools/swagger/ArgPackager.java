@@ -8,7 +8,7 @@ import uk.gov.ch.tools.ArgParser;
 
 class ArgPackager {
 
-    final static String OUTPUT_DIR_PARAM = "-o";
+    private final static String OUTPUT_DIR_PARAM = "-o";
     private static final String INPUT_DIR_PARAM = "-i";
     private static final String WORKING_DIR_PARAM = "-w";
     private ISource source = new Source();
@@ -34,7 +34,7 @@ class ArgPackager {
         }
     }
 
-    Optional<String> uniqueDir(Collection<String> dirs) {
+    private Optional<String> uniqueDir(Collection<String> dirs) {
         return dirs.stream().findFirst();
     }
 
@@ -74,7 +74,7 @@ class ArgPackager {
     private void generateOutputDir(final Collection<String> outputs) {
         setSingleOption(OUTPUT_DIR_PARAM, outputs, s -> {
             try {
-                source.setOuputDir(s);
+                source.setOutputDir(s);
             } catch (IOException e) {
                 System.err.println(e.getLocalizedMessage());
                 e.printStackTrace();

@@ -2,6 +2,7 @@ package uk.gov.ch.tools.swagger;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
@@ -14,9 +15,10 @@ import java.util.stream.Stream;
 
 public class Source implements ISource {
 
-    private String outputDir = null;
+    private String outputDir = "";
     private Collection<File> inputs;
     private String extension = ".json";
+    private Path workingDir;
 
     Source() {
         inputs = Collections.emptySet();
@@ -37,7 +39,7 @@ public class Source implements ISource {
     public void setInputFiles(final Collection<String> inputFiles) throws IOException {
         final Set<File> files = new LinkedHashSet<>();
         for (final String file : inputFiles) {
-            final File path = Paths.get(file).toFile();
+            final File path = getWorkingDir().resolve(file).toFile();
             if (!path.exists()) {
                 throw new IOException("Input path '" + path.getAbsolutePath() + "' not found");
             }
@@ -51,17 +53,26 @@ public class Source implements ISource {
         inputs = files;
     }
 
-    private Stream<File> getInputFilesInDir(final File path) {
-        final String[] list = path.list();
-        final Stream<File> files = Arrays.stream(Objects.requireNonNull(list))
-                .filter(f -> f.endsWith(extension))
-                .map(pathname -> new File(path, pathname))
-                .filter(File::isFile);
-        return files;
+    public Path getWorkingDir() {
+        return workingDir;
     }
 
     @Override
-    public void setOuputDir(final String oDir) throws IOException {
+    public void setWorkingDir(String s) {
+        workingDir = Paths.get(s).toAbsolutePath();
+    }
+
+    private Stream<File> getInputFilesInDir(final File path) {
+        final String[] list = path.list();
+        return Arrays.stream(Objects.requireNonNull(list))
+                .filter(f -> f.endsWith(extension))
+                .map(pathname -> new File(path, pathname))
+                .filter(File::isFile)
+                .sorted();
+    }
+
+    @Override
+    public void setOutputDir(final String oDir) throws IOException {
         File path = Paths.get(oDir).toFile();
         if (path.exists()) {
             if ((!path.isDirectory()) || (!path.canWrite())) {
@@ -75,6 +86,7 @@ public class Source implements ISource {
                         "Unable to create output directory '" + path.getAbsolutePath() + "'");
             }
         }
+        outputDir = path.getAbsolutePath();
     }
 
 }
