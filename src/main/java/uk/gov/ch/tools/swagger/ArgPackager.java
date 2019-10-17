@@ -1,54 +1,88 @@
 package uk.gov.ch.tools.swagger;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.function.Consumer;
 import uk.gov.ch.tools.ArgParser;
 
 class ArgPackager {
 
-    ISource source = new Source();
+    private final static String OUTPUT_DIR_PARAM = "-o";
+    private static final String INPUT_DIR_PARAM = "-i";
+    private static final String WORKING_DIR_PARAM = "-w";
+    private ISource source = new Source();
 
     ArgPackager(final String[] args) {
-        final String[] filenames = {
-                "swagger-codegen/src/main/swaggerspecifications/spec/companyOfficerList.json"
-//                ,"swagger-codegen/src/main/swaggerspecifications/spec/companyAddress.json"
-//               , "swagger-codegen/src/main/swaggerspecifications/spec/charges.json"
-//               ,"swagger-codegen/src/main/swaggerspecifications/spec/companyProfile.json"
-//                ,"swagger-codegen/src/main/swaggerspecifications/insolvency/insolvency1.2.json"
-        };
         try {
-            final String OUTPUT_DIR_PARAM = "-o";
-            source.setInputFiles(Arrays.asList(filenames));
+
             ArgParser argParser = new ArgParser(args);
             if (argParser.hasAny()) {
-                if (argParser.has("-i")) {
-                    source.setInputFiles(argParser.get("-i"));
+                if (argParser.has(WORKING_DIR_PARAM)) {
+                    generateWorkingDir(argParser.get(WORKING_DIR_PARAM));
+                }
+                if (argParser.has(INPUT_DIR_PARAM)) {
+                    source.setInputFiles(argParser.get(INPUT_DIR_PARAM));
                 }
                 if (argParser.has(OUTPUT_DIR_PARAM)) {
-                    final List<String> outputs = argParser.get(OUTPUT_DIR_PARAM);
-                    if (outputs.size() > 1) {
-                        System.err.println("If " + OUTPUT_DIR_PARAM
-                                + "is specified, it must be a single directory or empty for output to the same directory");
-                    } else {
-                        outputs.stream()
-                                .findFirst()
-                                .ifPresent(s -> {
-                                    try {
-                                        source.setOuputDir(s);
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                });
-                    }
+                    generateOutputDir(argParser.get(OUTPUT_DIR_PARAM));
                 }
             }
-        } catch (Exception ex) {
-
+        } catch (final Exception ex) {
+            System.err.println(ex.getLocalizedMessage());
+            ex.printStackTrace();
         }
     }
 
-    public ISource getSource() {
+    private Optional<String> uniqueDir(Collection<String> dirs) {
+        return dirs.stream().findFirst();
+    }
+
+    private void generateWorkingDir(final Collection<String> workingDirs) {
+        setSingleOption(WORKING_DIR_PARAM, workingDirs, s -> {
+            try {
+                source.setWorkingDir(s);
+            } catch (IOException e) {
+                System.err.println(e.getLocalizedMessage());
+                e.printStackTrace();
+            }
+        });
+
+    }
+
+    private void setSingleOption(final String option, final Collection<String> possibles,
+            Consumer<String> setter) {
+        switch (possibles.size()) {
+            case 0: {
+                System.err
+                        .println("Option '" + option + " requires a single value must be supplied");
+                break;
+            }
+            case 1: {
+                Optional<String> first = uniqueDir(possibles);
+                setter.accept(first.get());
+                break;
+            }
+            default: {
+                System.err.println(
+                        "If " + option + " is specified, it must be a single value not " + possibles
+                                .size());
+            }
+        }
+    }
+
+    private void generateOutputDir(final Collection<String> outputs) {
+        setSingleOption(OUTPUT_DIR_PARAM, outputs, s -> {
+            try {
+                source.setOutputDir(s);
+            } catch (IOException e) {
+                System.err.println(e.getLocalizedMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    ISource getSource() {
         return source;
     }
 }

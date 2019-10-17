@@ -16,10 +16,9 @@ import java.nio.file.Paths;
  */
 public class Fix1_2 {
 
-    private static ThreadLocal<File> lastFile = new ThreadLocal<>();
-    private ISource source;
+    private static ISource source;
 
-    public static void main(String[] args) {
+    public static void main(String... args) {
         Fix1_2 fixer = new Fix1_2();
         fixer.parseArgs(args);
         fixer.fixFiles();
@@ -27,6 +26,7 @@ public class Fix1_2 {
 
     private static String readFile(final File path) {
         try {
+            System.out.println("Reading: " + path);
             final byte[] encoded = Files.readAllBytes(path.toPath());
             return new String(encoded, StandardCharsets.UTF_8);
         } catch (Exception ex) {
@@ -36,19 +36,19 @@ public class Fix1_2 {
         }
     }
 
-    static JsonNode fixJson(File file) {
-//        final File file = lastFile.get() == null ? new File(fName)
-//                : new File(lastFile.get().getParent(), fName);
-        String jsonContent = readFile(file);
-        if (lastFile.get() == null) {
-            lastFile.set(file.getAbsoluteFile());
-        }
+    static JsonNode fixJson(final File file) {
+        final Path relativeToBase = getRelativeToBase(source.getWorkingDir(), file.getPath());
+        final String jsonContent = readFile(relativeToBase.toFile());
         final JsonNodeExtractor ne = new JsonNodeExtractor();
         return ne.convertJson(jsonContent);
     }
 
+    private static Path getRelativeToBase(final Path base, final String file) {
+        return base.resolve(file);
+    }
+
     private void fixFiles() {
-        source.getInputFiles().forEach(f -> fixContent(f));
+        source.getInputFiles().parallelStream().forEach(this::fixContent);
     }
 
     private void fixContent(final File fName) {
@@ -62,11 +62,14 @@ public class Fix1_2 {
             Path outPath;
             if (outDir.isEmpty()) {
                 outPath = Paths.get(fName + ".fixed.json");
-                Files.write(outPath, bytes);
             } else {
-                outPath = Paths.get(outDir).resolve(fName.toPath());
+                outPath = getRelativeToBase(Paths.get(outDir),
+                        fName.toPath().getFileName().toString());
             }
+            System.out.println("Writing: " + outPath);
+            Files.write(outPath, bytes);
         } catch (IOException e) {
+            System.err.println("Fixing '" + fName + "'");
             e.printStackTrace();
         }
     }
